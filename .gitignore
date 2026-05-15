@@ -23,3 +23,7 @@ Thumbs.db
 
 # Reports générés
 reports/figures/*.png
+
+# Document personnel de préparation à la soutenance
+SOUTENANCE.md
+SOUTENANCE.pdf
