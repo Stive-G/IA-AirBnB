@@ -1,27 +1,32 @@
-# AirBnB - Prédiction de Prix par IA
+# AirBnB - Prédiction de Prix par IA Supervisée
 
 > Prédire le prix optimal d'un nouveau logement AirBnB à partir des données réelles de **Lyon**, **Paris** et **Bordeaux** — Juin 2025.
 
 ---
 
-## Contexte
+## Cadre du projet
 
-Un propriétaire souhaite mettre son logement sur AirBnB. La question est : **quel prix proposer ?**
+Ce projet a été réalisé dans le cadre du cours **Python — Analyse de Données pour l'IA Supervisée**,
+encadré par **Monsieur Sayf BEJAOUI**.
 
-Ce projet applique des modèles de **régression linéaire** (simple et multiple) sur les données détaillées AirBnB (79 colonnes) issues de [Inside AirBnB](https://insideairbnb.com/get-the-data/).
+**Problématique :** Un propriétaire souhaite mettre son logement sur AirBnB. La question est : **quel prix proposer ?**
+
+Le projet applique des modèles de **régression linéaire** (simple et multiple) sur les données détaillées AirBnB (79 colonnes) issues de [Inside AirBnB](https://insideairbnb.com/get-the-data/).
 
 ---
 
 ## Données — Juin 2025
 
-| Ville | Date | Annonces brutes | Après nettoyage | URL |
-|-------|------|-----------------|-----------------|-----|
-| Lyon | 15/06/2025 | 9 691 | 5 382 | `auvergne-rhone-alpes/lyon/2025-06-15` |
-| Paris | 06/06/2025 | 84 055 | 52 924 | `ile-de-france/paris/2025-06-06` |
-| Bordeaux | 15/06/2025 | 12 383 | 8 195 | `nouvelle-aquitaine/bordeaux/2025-06-15` |
+| Ville | Date | Annonces brutes | Après nettoyage |
+|-------|------|-----------------|-----------------|
+| Lyon | 15/06/2025 | 9 691 | 5 382 |
+| Paris | 06/06/2025 | 84 055 | 52 924 |
+| Bordeaux | 15/06/2025 | 12 383 | 8 195 |
 
-Ces fichiers détaillés contiennent **79 colonnes** (vs 18 dans les fichiers de visualisation),
+Les fichiers détaillés contiennent **79 colonnes** (vs 18 dans les fichiers de visualisation),
 incluant les scores de reviews, les infos hôte, le nombre de chambres, la salle de bain, etc.
+
+Source : [https://insideairbnb.com/get-the-data/](https://insideairbnb.com/get-the-data/)
 
 ---
 
@@ -31,22 +36,11 @@ incluant les scores de reviews, les infos hôte, le nombre de chambres, la salle
 AirBnb_Projet/
 │
 ├── README.md
-├── SOUTENANCE.md               ← Guide de préparation à l'oral
 ├── requirements.txt
 ├── .gitignore
 │
-├── data/
-│   ├── raw/
-│   │   ├── lyon/listings_detail.csv        (18.9 Mo — 9 691 annonces × 79 colonnes)
-│   │   ├── paris/listings_detail.csv       (173 Mo  — 84 055 annonces × 79 colonnes)
-│   │   └── bordeaux/listings_detail.csv    (25 Mo   — 12 383 annonces × 79 colonnes)
-│   └── processed/
-│       ├── lyon_clean.csv       / lyon_features.csv
-│       ├── paris_clean.csv      / paris_features.csv
-│       └── bordeaux_clean.csv   / bordeaux_features.csv
-│
 ├── notebook/
-│   └── AirBnB_Prediction_Prix.ipynb    ← LIVRABLE : notebook unique complet
+│   └── AirBnB_Prediction_Prix.ipynb    ← Livrable : notebook unique complet
 │
 ├── src/
 │   ├── data/
@@ -58,16 +52,12 @@ AirBnb_Projet/
 │       ├── train.py            Régression linéaire simple & multiple
 │       └── predict.py          Prédiction pour un nouveau logement
 │
+├── data/
+│   ├── raw/                    Données brutes (exclues de git — trop volumineuses)
+│   └── processed/              CSV nettoyés générés par le notebook
+│
 └── reports/
     └── figures/                Graphiques PNG générés automatiquement
-        ├── prix_distribution.png
-        ├── prix_par_type.png
-        ├── top_quartiers.png
-        ├── boxplot_prix.png
-        ├── regression_simple.png
-        ├── regression_multiple.png
-        ├── coefficients.png
-        └── residus.png
 ```
 
 ---
@@ -138,23 +128,18 @@ download_all(raw_dir="data/raw")   # télécharge et décompresse les .gz
 
 | Lyon | Paris | Bordeaux |
 |------|-------|----------|
-| 130.64€/nuit | 305.73€/nuit | 115.36€/nuit |
+| 130.64 €/nuit | 305.73 €/nuit | 115.36 €/nuit |
 
 ---
 
-## Notebooks
+## Notebook livrable
 
-Le projet contient **7 notebooks** :
+```
+notebook/AirBnB_Prediction_Prix.ipynb
+```
 
-| Notebook | Rôle |
-|----------|------|
-| `01_data_collection.ipynb` | Révision — Collecte & aperçu |
-| `02_preprocessing.ipynb` | Révision — Nettoyage (4 étapes) |
-| `03_descriptive_analysis.ipynb` | Révision — Statistiques & graphiques |
-| `04_feature_engineering.ipynb` | Révision — Recodage & aberrants |
-| `05_modeling.ipynb` | Révision — Régression simple & multiple |
-| `06_evaluation.ipynb` | Révision — Métriques & prédiction |
-| **`AirBnB_Prediction_Prix.ipynb`** | **Livrable — Notebook unique complet** |
+Contient l'intégralité du pipeline en un seul fichier :
+collecte → prétraitement → analyse → feature engineering → modélisation → évaluation → prédiction.
 
 ---
 
@@ -162,17 +147,11 @@ Le projet contient **7 notebooks** :
 
 ```bash
 pip install -r requirements.txt
-jupyter notebook notebooks/
+jupyter notebook notebook/AirBnB_Prediction_Prix.ipynb
 ```
-
-Ordre d'exécution : `01 → 02 → 03 → 04 → 05 → 06` (ou directement `AirBnB_Prediction_Prix.ipynb`)
 
 ---
 
 ## Technologies
 
 `Python 3.13` · `pandas` · `numpy` · `scikit-learn` · `matplotlib` · `Jupyter`
-
-## Source des données
-
-[https://insideairbnb.com/get-the-data/](https://insideairbnb.com/get-the-data/) — Données juin 2025
