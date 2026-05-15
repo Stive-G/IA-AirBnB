@@ -1,4 +1,4 @@
-# AirBnB - Prédiction de Prix par IA Supervisée
+# AirBnB - Prédiction de Prix par IA 
 
 > Prédire le prix optimal d'un nouveau logement AirBnB à partir des données réelles de **Lyon**, **Paris** et **Bordeaux** — Juin 2025.
 
@@ -6,7 +6,7 @@
 
 ## Cadre du projet
 
-Ce projet a été réalisé dans le cadre du cours **Python — Analyse de Données pour l'IA Supervisée**,
+Ce projet a été réalisé dans le cadre du cours **Python — Analyse de Données pour l'IA**,
 encadré par **Monsieur Sayf BEJAOUI**.
 
 **Problématique :** Un propriétaire souhaite mettre son logement sur AirBnB. La question est : **quel prix proposer ?**
