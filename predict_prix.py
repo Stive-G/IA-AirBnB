@@ -1,233 +1,177 @@
-"""
-IA de prédiction de prix AirBnB
---------------------------------
-Ce script pose des questions sur un logement et prédit
-le prix optimal par nuit pour Lyon, Paris et Bordeaux.
+from pathlib import Path
 
-Utilisation :
-    py -3.13 predict_prix.py
-"""
-import sys
-import os
-import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
-# ── Constantes ────────────────────────────────────────────────────────────────
 
-CITIES = {"Lyon": "lyon", "Paris": "paris", "Bordeaux": "bordeaux"}
+BASE_DIR = Path(__file__).resolve().parent
 
-FEATURES = [
-    "accommodates", "bedrooms", "beds", "bathrooms", "minimum_nights",
-    "availability_365", "number_of_reviews", "reviews_per_month",
-    "review_scores_rating", "review_scores_cleanliness", "review_scores_location",
-    "host_is_superhost", "host_response_rate", "calculated_host_listings_count",
-    "instant_bookable", "room_type_code", "neighbourhood_freq", "property_type_freq",
-]
-
-ROOM_TYPE_MAP = {
-    "1": ("Logement entier",   3),
-    "2": ("Chambre privée",    1),
-    "3": ("Chambre d'hôtel",   2),
-    "4": ("Chambre partagée",  0),
+CITIES = {
+    "Lyon": "lyon",
+    "Paris": "paris",
+    "Bordeaux": "bordeaux",
 }
 
-TARGET = "price"
+FEATURES = [
+    "accommodates",
+    "bedrooms",
+    "beds",
+    "bathrooms",
+    "minimum_nights",
+    "availability_365",
+    "number_of_reviews",
+    "reviews_per_month",
+    "review_scores_rating",
+    "review_scores_cleanliness",
+    "review_scores_location",
+    "host_is_superhost",
+    "host_response_rate",
+    "calculated_host_listings_count",
+    "instant_bookable",
+    "room_type_code",
+    "neighbourhood_freq",
+    "property_type_freq",
+]
 
-# ── Chargement et entraînement ─────────────────────────────────────────────────
 
-def charger_et_entrainer():
-    """Charge les données nettoyées et entraîne un modèle par ville."""
+def lire_int(question, valeur_defaut):
+    reponse = input(question + " [" + str(valeur_defaut) + "] : ")
+    if reponse == "":
+        return valeur_defaut
+    return int(reponse)
+
+
+def lire_float(question, valeur_defaut):
+    reponse = input(question + " [" + str(valeur_defaut) + "] : ")
+    if reponse == "":
+        return valeur_defaut
+    return float(reponse)
+
+
+def lire_oui_non(question):
+    reponse = input(question + " (o/n) : ").lower()
+    if reponse == "o" or reponse == "oui":
+        return 1
+    return 0
+
+
+def charger_modeles():
     modeles = {}
-    freq_quartiers = {}
+    frequences_quartiers = {}
+    dossier = BASE_DIR / "data" / "processed"
 
-    data_dir = os.path.join(os.path.dirname(__file__), "data", "processed")
+    for ville, nom_fichier in CITIES.items():
+        chemin = dossier / (nom_fichier + "_features.csv")
 
-    for ville, cle in CITIES.items():
-        path = os.path.join(data_dir, f"{cle}_features.csv")
-        if not os.path.exists(path):
-            print(f"  [!] Fichier manquant : {path}")
-            print(f"      Exécute d'abord le notebook AirBnB_Prediction_Prix.ipynb")
-            sys.exit(1)
+        if not chemin.exists():
+            print("Fichier manquant :", chemin)
+            print("Il faut d'abord exécuter le notebook.")
+            return None, None
 
-        df = pd.read_csv(path)
-        feats = [f for f in FEATURES if f in df.columns]
-        d = df[feats + [TARGET]].dropna()
-        X, y = d[feats], d[TARGET]
+        df = pd.read_csv(chemin)
+        colonnes = []
 
-        X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42)
-        model = LinearRegression().fit(X_train, y_train)
+        for col in FEATURES:
+            if col in df.columns:
+                colonnes.append(col)
 
-        modeles[ville] = (model, feats)
+        data = df[colonnes + ["price"]].dropna()
+        X = data[colonnes]
+        y = data["price"]
 
-        # Fréquence médiane du quartier pour cette ville (valeur par défaut)
-        freq_quartiers[ville] = float(df["neighbourhood_freq"].median())
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=0.2,
+            random_state=42,
+        )
 
-    return modeles, freq_quartiers
+        # On entraîne un modèle pour chaque ville.
+        modele = LinearRegression()
+        modele.fit(X_train, y_train)
 
+        modeles[ville] = (modele, colonnes)
+        frequences_quartiers[ville] = df["neighbourhood_freq"].median()
 
-# ── Interface utilisateur ──────────────────────────────────────────────────────
-
-def demander_int(question, defaut, mini=0, maxi=9999):
-    """Pose une question et retourne un entier validé."""
-    while True:
-        rep = input(f"  {question} [défaut: {defaut}] : ").strip()
-        if rep == "":
-            return defaut
-        try:
-            val = int(rep)
-            if mini <= val <= maxi:
-                return val
-            print(f"    → Valeur entre {mini} et {maxi} attendue.")
-        except ValueError:
-            print("    → Entier attendu.")
+    return modeles, frequences_quartiers
 
 
-def demander_float(question, defaut, mini=0.0, maxi=9999.0):
-    """Pose une question et retourne un float validé."""
-    while True:
-        rep = input(f"  {question} [défaut: {defaut}] : ").strip()
-        if rep == "":
-            return defaut
-        try:
-            val = float(rep)
-            if mini <= val <= maxi:
-                return val
-            print(f"    → Valeur entre {mini} et {maxi} attendue.")
-        except ValueError:
-            print("    → Nombre décimal attendu.")
+def demander_infos():
+    print("\nInformations du logement")
+
+    print("Type de logement")
+    print("1 - Logement entier")
+    print("2 - Chambre privée")
+    print("3 - Chambre d'hôtel")
+    print("4 - Chambre partagée")
+
+    choix = input("Votre choix [1] : ")
+    if choix == "":
+        choix = "1"
+
+    if choix == "1":
+        room_type_code = 3
+    elif choix == "2":
+        room_type_code = 1
+    elif choix == "3":
+        room_type_code = 2
+    else:
+        room_type_code = 0
+
+    valeurs = {}
+    valeurs["accommodates"] = lire_int("Nombre de personnes", 2)
+    valeurs["bedrooms"] = lire_int("Nombre de chambres", 1)
+    valeurs["beds"] = lire_int("Nombre de lits", 1)
+    valeurs["bathrooms"] = lire_float("Nombre de salles de bain", 1.0)
+    valeurs["minimum_nights"] = lire_int("Nuits minimum", 2)
+    valeurs["availability_365"] = lire_int("Jours disponibles par an", 180)
+    valeurs["number_of_reviews"] = lire_int("Nombre d'avis", 0)
+    valeurs["reviews_per_month"] = lire_float("Avis par mois", 0.0)
+    valeurs["review_scores_rating"] = lire_float("Note globale /5", 0.0)
+    valeurs["review_scores_cleanliness"] = lire_float("Note propreté /5", 0.0)
+    valeurs["review_scores_location"] = lire_float("Note localisation /5", 0.0)
+    valeurs["host_is_superhost"] = lire_oui_non("Superhost")
+    valeurs["host_response_rate"] = lire_float("Taux de réponse", 90.0)
+    valeurs["calculated_host_listings_count"] = lire_int("Nombre d'annonces de l'hôte", 1)
+    valeurs["instant_bookable"] = lire_oui_non("Réservation instantanée")
+    valeurs["room_type_code"] = room_type_code
+    valeurs["property_type_freq"] = 0.35
+
+    return valeurs
 
 
-def demander_oui_non(question, defaut="o"):
-    """Pose une question oui/non et retourne 1 ou 0."""
-    rep = input(f"  {question} (o/n) [défaut: {defaut}] : ").strip().lower()
-    if rep == "":
-        rep = defaut
-    return 1 if rep in ("o", "oui", "y", "yes") else 0
+def predire_prix(modeles, frequences_quartiers, valeurs):
+    print("\nPrix estimés")
 
+    for ville, infos_modele in modeles.items():
+        modele = infos_modele[0]
+        colonnes = infos_modele[1]
 
-def collecter_caracteristiques(freq_quartiers):
-    """Pose toutes les questions et retourne un dictionnaire de features."""
-    print("\n" + "═" * 55)
-    print("  CARACTÉRISTIQUES DE VOTRE LOGEMENT")
-    print("═" * 55)
+        valeurs["neighbourhood_freq"] = frequences_quartiers[ville]
 
-    # Type de logement
-    print("\n  Type de logement :")
-    for k, (label, _) in ROOM_TYPE_MAP.items():
-        print(f"    {k}. {label}")
-    while True:
-        choix = input("  Votre choix [défaut: 1] : ").strip() or "1"
-        if choix in ROOM_TYPE_MAP:
-            room_label, room_code = ROOM_TYPE_MAP[choix]
-            print(f"    → {room_label} sélectionné")
-            break
-        print("    → Choix invalide (1, 2, 3 ou 4).")
+        ligne = []
+        for col in colonnes:
+            ligne.append(valeurs.get(col, 0))
 
-    print()
-    accommodates = demander_int("Nombre de personnes max accueillies",  2,  1, 20)
-    bedrooms     = demander_int("Nombre de chambres",                   1,  0, 20)
-    beds         = demander_int("Nombre de lits",                       1,  0, 30)
-    bathrooms    = demander_float("Nombre de salles de bain",           1.0, 0, 10)
-    minimum_nights = demander_int("Nuits minimum imposées",             2,  1, 365)
-    availability_365 = demander_int("Jours disponibles par an",        180,  0, 365)
+        X = pd.DataFrame([ligne], columns=colonnes)
+        prix = modele.predict(X)[0]
 
-    print("\n" + "─" * 55)
-    print("  INFORMATIONS SUR L'HÔTE")
-    print("─" * 55)
-    superhost     = demander_oui_non("Êtes-vous superhost ?",          "n")
-    response_rate = demander_float("Taux de réponse (%) ",             90.0, 0, 100)
-    nb_listings   = demander_int("Nombre total d'annonces que vous gérez", 1, 1, 500)
-    instant       = demander_oui_non("Réservation instantanée ?",     "n")
+        print(ville, ":", round(float(prix), 2), "euros / nuit")
 
-    print("\n" + "─" * 55)
-    print("  AVIS ET NOTES")
-    print("─" * 55)
-    nb_reviews     = demander_int("Nombre total d'avis reçus",         0,   0, 9999)
-    reviews_month  = demander_float("Avis par mois en moyenne",        0.0, 0, 99)
-    note_globale   = demander_float("Note globale /5 (0 = pas encore noté)", 0.0, 0, 5)
-    note_proprete  = demander_float("Note propreté /5",                0.0, 0, 5)
-    note_location  = demander_float("Note localisation /5",            0.0, 0, 5)
-
-    # Fréquence de quartier : on utilise la médiane de chaque ville par défaut
-    # (représente un quartier "moyen" dans les données)
-    property_type_freq = 0.35  # valeur typique pour les appartements entiers
-
-    return {
-        "accommodates"                  : accommodates,
-        "bedrooms"                      : bedrooms,
-        "beds"                          : beds,
-        "bathrooms"                     : bathrooms,
-        "minimum_nights"                : minimum_nights,
-        "availability_365"              : availability_365,
-        "number_of_reviews"             : nb_reviews,
-        "reviews_per_month"             : reviews_month,
-        "review_scores_rating"          : note_globale,
-        "review_scores_cleanliness"     : note_proprete,
-        "review_scores_location"        : note_location,
-        "host_is_superhost"             : superhost,
-        "host_response_rate"            : response_rate,
-        "calculated_host_listings_count": nb_listings,
-        "instant_bookable"              : instant,
-        "room_type_code"                : room_code,
-        "property_type_freq"            : property_type_freq,
-        # neighbourhood_freq sera remplacé par la médiane de chaque ville
-    }, freq_quartiers
-
-
-# ── Prédiction ─────────────────────────────────────────────────────────────────
-
-def predire(modeles, caracteristiques, freq_quartiers):
-    """Calcule le prix estimé pour chaque ville et affiche les résultats."""
-    print("\n" + "═" * 55)
-    print("  PRIX ESTIMÉ PAR L'IA")
-    print("═" * 55)
-
-    caract, _ = caracteristiques
-
-    for ville, (model, feats) in modeles.items():
-        # On utilise la fréquence médiane du quartier pour cette ville
-        caract["neighbourhood_freq"] = freq_quartiers[ville]
-
-        X = pd.DataFrame([[caract.get(f, 0) for f in feats]], columns=feats)
-        prix = round(float(model.predict(X)[0]), 2)
-
-        # Fourchette ±15% pour donner une marge réaliste
-        bas  = round(prix * 0.85, 2)
-        haut = round(prix * 1.15, 2)
-
-        print(f"\n  {ville}")
-        print(f"    Prix estimé  : {prix} €/nuit")
-        print(f"    Fourchette   : {bas} € – {haut} €/nuit")
-
-    print("\n" + "═" * 55)
-    print("  Note : estimation basée sur les données AirBnB juin 2025.")
-    print("  Le prix réel peut varier selon la saison, les photos,")
-    print("  la qualité de la description et les événements locaux.")
-    print("═" * 55 + "\n")
-
-
-# ── Point d'entrée ─────────────────────────────────────────────────────────────
 
 def main():
-    print("\n" + "═" * 55)
-    print("  IA AIRBNB — PRÉDICTION DE PRIX")
-    print("  Cours Python · IA Supervisée · M. Sayf BEJAOUI")
-    print("═" * 55)
-    print("\n  Chargement des modèles...")
+    print("IA Airbnb - prédiction de prix")
 
-    modeles, freq_quartiers = charger_et_entrainer()
-    print("  Modèles prêts (Lyon, Paris, Bordeaux).\n")
+    modeles, frequences_quartiers = charger_modeles()
+    if modeles is None:
+        return
 
-    while True:
-        caract = collecter_caracteristiques(freq_quartiers)
-        predire(modeles, caract, freq_quartiers)
-
-        continuer = input("  Estimer un autre logement ? (o/n) : ").strip().lower()
-        if continuer not in ("o", "oui", "y", "yes"):
-            print("\n  Au revoir !\n")
-            break
+    continuer = "o"
+    while continuer == "o":
+        valeurs = demander_infos()
+        predire_prix(modeles, frequences_quartiers, valeurs)
+        continuer = input("\nFaire une autre prédiction ? (o/n) : ").lower()
 
 
 if __name__ == "__main__":
